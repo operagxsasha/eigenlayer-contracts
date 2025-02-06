@@ -160,6 +160,7 @@ contract EigenPod is Initializable, ReentrancyGuardUpgradeable, EigenPodPausingC
         // Verify `balanceContainerProof` against `beaconBlockRoot`
         BeaconChainProofs.verifyBalanceContainer({
             proofTimestamp: checkpointTimestamp,
+            pectraForkTimestamp: getPectraForkTimestamp(),
             beaconBlockRoot: checkpoint.beaconBlockRoot,
             proof: balanceContainerProof
         });
@@ -344,6 +345,7 @@ contract EigenPod is Initializable, ReentrancyGuardUpgradeable, EigenPodPausingC
         // Verify Validator container proof against `beaconStateRoot`
         BeaconChainProofs.verifyValidatorFields({
             proofTimestamp: beaconTimestamp,
+            pectraForkTimestamp: getPectraForkTimestamp(),
             beaconStateRoot: stateRootProof.beaconStateRoot,
             validatorFields: proof.validatorFields,
             validatorFieldsProof: proof.proof,
@@ -429,8 +431,7 @@ contract EigenPod is Initializable, ReentrancyGuardUpgradeable, EigenPodPausingC
         bytes calldata validatorFieldsProof,
         bytes32[] calldata validatorFields
     ) internal returns (uint256) {
-        bytes32 pubkeyHash = validatorFields.getPubkeyHash();
-        ValidatorInfo memory validatorInfo = _validatorPubkeyHashToInfo[pubkeyHash];
+        ValidatorInfo memory validatorInfo = _validatorPubkeyHashToInfo[validatorFields.getPubkeyHash()];
 
         // Withdrawal credential proofs should only be processed for "INACTIVE" validators
         require(validatorInfo.status == VALIDATOR_STATUS.INACTIVE, CredentialsAlreadyVerified());
@@ -491,6 +492,7 @@ contract EigenPod is Initializable, ReentrancyGuardUpgradeable, EigenPodPausingC
         // Verify passed-in validatorFields against verified beaconStateRoot:
         BeaconChainProofs.verifyValidatorFields({
             proofTimestamp: beaconTimestamp,
+            pectraForkTimestamp: getPectraForkTimestamp(),
             beaconStateRoot: beaconStateRoot,
             validatorFields: validatorFields,
             validatorFieldsProof: validatorFieldsProof,
@@ -506,7 +508,7 @@ contract EigenPod is Initializable, ReentrancyGuardUpgradeable, EigenPodPausingC
             currentCheckpointTimestamp == 0 ? lastCheckpointTimestamp : currentCheckpointTimestamp;
 
         // Proofs complete - create the validator in state
-        _validatorPubkeyHashToInfo[pubkeyHash] = ValidatorInfo({
+        _validatorPubkeyHashToInfo[validatorFields.getPubkeyHash()] = ValidatorInfo({
             validatorIndex: validatorIndex,
             restakedBalanceGwei: restakedBalanceGwei,
             lastCheckpointedAt: lastCheckpointedAt,
@@ -741,5 +743,9 @@ contract EigenPod is Initializable, ReentrancyGuardUpgradeable, EigenPodPausingC
 
         require(success && result.length > 0, InvalidEIP4788Response());
         return abi.decode(result, (bytes32));
+    }
+
+    function getPectraForkTimestamp() public view returns (uint64) {
+        return eigenPodManager.pectraForkTimestamp();
     }
 }
