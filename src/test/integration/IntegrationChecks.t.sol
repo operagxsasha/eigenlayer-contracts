@@ -432,18 +432,6 @@ contract IntegrationCheckUtils is IntegrationBase {
         assert_Snap_Unchanged_AllocatableMagnitude(operator, allStrats, "should not have updated allocatable magnitude");
     }
 
-    // /// @dev Checks invariants for registration for a variety of allocation states
-    // /// 
-    // function check_Registration_State(
-    //     User operator,
-    //     OperatorSet memory operatorSet,
-    //     IStrategy[] memory unallocated,
-    //     AllocateParams memory pending,
-    //     AllocateParams memory active
-    // ) internal {
-    //     check_Base_Registration_State(operator, operatorSet);
-    // }
-
     /// @dev Check invariants for registerForOperatorSets given a set of strategies
     /// for which NO allocation exists (currentMag/pendingDiff are 0)
     /// @param unallocated For the given operatorSet, a list of strategies for which NO allocation exists
@@ -818,6 +806,39 @@ contract IntegrationCheckUtils is IntegrationBase {
         
         assert_MaxEqualsAllocatablePlusEncumbered(operator, "max magnitude should equal encumbered plus allocatable");
         check_ActiveModification_State(operator, deallocateParams); 
+    }
+
+    /*******************************************************************************
+                                ALM - SLASHING
+    *******************************************************************************/
+
+    function check_Base_Slashing_State(
+        User operator,
+        AllocateParams memory allocateParams,
+        SlashingParams memory slashParams
+    ) internal {
+        OperatorSet memory operatorSet = allocateParams.operatorSet;
+
+        check_MaxMag_Invariants(operator);
+        check_IsSlashable_State(operator, operatorSet, allocateParams.strategies);
+
+        // Slashing SHOULD change max magnitude and current allocation
+        assert_Snap_Slashed_MaxMagnitude(operator, slashParams, "slash should lower max magnitude");
+        assert_Snap_Slashed_EncumberedMagnitude(operator, slashParams, "slash should lower max magnitude");
+        assert_Snap_Slashed_AllocatedStake(operator, operatorSet, slashParams, "slash should lower allocated stake");
+        assert_Snap_Slashed_SlashableStake(operator, operatorSet, slashParams, "slash should lower slashable stake");
+        assert_Snap_Slashed_OperatorShares(operator, slashParams, "slash should remove operator shares");
+        assert_Snap_Slashed_Allocation(operator, operatorSet, slashParams, "slash should reduce current magnitude");
+        // assert_Snap_SharesBecameBurnable(operator, "");
+        // assert_Snap_Reduced_Allocations(operator, operatorSet, allocateParams, slashParams, "slash should reduce existing allocations");
+        // assert_Snap_Removed_EncumberedMagnitude(operator, strategies, magnitudeRemoved, err);
+
+        // Slashing SHOULD NOT change allocatable magnitude, registration, and slashability status
+        assert_Snap_Unchanged_AllocatableMagnitude(operator, allStrats, "slashing should not change allocatable magnitude");
+        assert_Snap_Unchanged_Registration(operator, operatorSet, "slash should not change registration status");
+        assert_Snap_Unchanged_Slashability(operator, operatorSet, "slash should not change slashability status");
+        assert_Snap_Unchanged_AllocatedSets(operator, "should not have updated allocated sets");
+        assert_Snap_Unchanged_AllocatedStrats(operator, operatorSet, "should not have updated allocated strategies");
     }
 
     // TODO: improvement needed 

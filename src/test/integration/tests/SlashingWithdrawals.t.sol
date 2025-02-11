@@ -3,7 +3,7 @@ pragma solidity ^0.8.27;
 
 import "src/test/integration/IntegrationChecks.t.sol";
 
-contract Integration_SlashingWithdrawals is IntegrationCheckUtils {
+contract Integration_ALMSlashBase is IntegrationCheckUtils {
     
     AVS avs;
     OperatorSet operatorSet;
@@ -16,15 +16,6 @@ contract Integration_SlashingWithdrawals is IntegrationCheckUtils {
     uint[] initTokenBalances;
     uint[] initDepositShares;
 
-    /**
-     * Current test setup uses a single operator set and multiple strategies. Slashes
-     * are simple, done on that single operator set.
-     * -- good for testing full slashes where 100% of a strategy's magnitude is impacted
-     * -- could have a separate setup with multiple operator sets and one strategy
-     *    to test "full slashes" that don't hit 100% of a strategy's magnitude (but are
-     *    100% of allocated magnitude for that operator set)
-     */
-
     /// Shared setup:
     /// 
     /// 1. Generate staker, operator, and AVS
@@ -33,8 +24,12 @@ contract Integration_SlashingWithdrawals is IntegrationCheckUtils {
     /// 4. Operator allocates to operator set
     /// 5. Operator registers for operator set
     /// NOTE: Steps 4 and 5 are done in random order, as these should not have an outcome on the test
-    function _init() internal override {
-        (staker, strategies, initTokenBalances) = _newRandomStaker();
+    function _init() internal virtual override {
+        // (staker, strategies, initTokenBalances) = _newRandomStaker();
+        // operator = _newRandomOperator_NoAssets();
+        // (avs,) = _newRandomAVS();
+
+        (staker, strategies, initTokenBalances) = _newBasicStaker();
         operator = _newRandomOperator_NoAssets();
         (avs,) = _newRandomAVS();
 
@@ -72,6 +67,33 @@ contract Integration_SlashingWithdrawals is IntegrationCheckUtils {
    
         _rollBlocksForCompleteAllocation(operator, operatorSet, strategies);
     }
+}
+
+contract Integration_InitSlash is Integration_ALMSlashBase {
+
+    SlashingParams slashParams;
+
+    // function _init() internal override {
+    //     super._init(); 
+    // }
+
+    function testFuzz_slashSingle(uint24 _r) public rand(_r) {
+        slashParams = _genSlashing_Half(operator, operatorSet);
+        avs.slashOperator(slashParams);
+        check_Base_Slashing_State(operator, allocateParams, slashParams);
+    } 
+
+    function testFuzz_slashMulti(uint24 _r) public rand(_r) {
+        for (uint i = 0; i < 25; i++) {
+            emit log_named_uint("iter", i);
+            slashParams = _genSlashing_Half(operator, operatorSet);
+            avs.slashOperator(slashParams);
+            check_Base_Slashing_State(operator, allocateParams, slashParams);
+        }
+    } 
+}
+
+contract Integration_SlashingWithdrawals is Integration_ALMSlashBase {
 
     function testFuzz_slash_undelegate_completeAsTokens(
         uint24 _random

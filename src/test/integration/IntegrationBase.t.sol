@@ -18,6 +18,7 @@ import "src/test/integration/users/User_M1.t.sol";
 abstract contract IntegrationBase is IntegrationDeployer, TypeImporter {
     using StdStyle for *;
     using SlashingLib for *;
+    using Math for uint256;
     using Strings for *;
     using print for *;
 
@@ -65,6 +66,35 @@ abstract contract IntegrationBase is IntegrationDeployer, TypeImporter {
         assert_HasUnderlyingTokenBalances(staker, strategies, tokenBalances, "_newRandomStaker: failed to award token balances");
 
         numStakers++;
+        return (staker, strategies, tokenBalances);
+    }
+
+    function _newBasicStaker() internal returns (User, IStrategy[] memory, uint[] memory) {
+        string memory stakerName;
+
+        User staker;
+        IStrategy[] memory strategies;
+        uint[] memory tokenBalances;
+
+        if (!isUpgraded) {
+            stakerName = string.concat("M2Staker", cheats.toString(numStakers));
+
+            (staker, strategies, tokenBalances) = _randUser(stakerName);
+
+            stakersToMigrate.push(staker);
+        } else {
+            stakerName = string.concat("staker", cheats.toString(numStakers));
+
+            (staker, strategies, tokenBalances) = _randUser(stakerName);
+        }
+
+        assert_HasUnderlyingTokenBalances(staker, strategies, tokenBalances, "_newRandomStaker: failed to award token balances");
+
+        numStakers++;
+        assembly { // TODO HACK
+            mstore(strategies, 1)
+            mstore(tokenBalances, 1)
+        }
         return (staker, strategies, tokenBalances);
     }
 
@@ -835,6 +865,22 @@ abstract contract IntegrationBase is IntegrationDeployer, TypeImporter {
         }
     }
 
+    function assert_Snap_Slashed_SlashableStake(
+        User operator,
+        OperatorSet memory operatorSet,
+        SlashingParams memory params,
+        string memory err
+    ) internal {
+        uint[] memory curSlashableStake = _getMinSlashableStake(operator, operatorSet, params.strategies);
+        uint[] memory prevSlashableStake = _getPrevMinSlashableStake(operator, operatorSet, params.strategies);
+
+        for (uint i = 0; i < params.strategies.length; i++) {
+            // uint expectedSlashed = prevSlashableStake[i].mulDiv(params.wadsToSlash[i], WAD, Math.Rounding.Down);
+            uint expectedSlashed = prevSlashableStake[i].mulWad(params.wadsToSlash[i]);
+            assertEq(curSlashableStake[i], prevSlashableStake[i] - expectedSlashed, err);
+        }
+    }
+
     function assert_Snap_StakeBecameAllocated(
         User operator,
         OperatorSet memory operatorSet,
@@ -874,6 +920,22 @@ abstract contract IntegrationBase is IntegrationDeployer, TypeImporter {
 
         for (uint i = 0; i < curAllocatedStake.length; i++) {
             assertEq(curAllocatedStake[i], prevAllocatedStake[i], err);
+        }
+    }
+
+    function assert_Snap_Slashed_AllocatedStake(
+        User operator,
+        OperatorSet memory operatorSet,
+        SlashingParams memory params,
+        string memory err
+    ) internal {
+        uint[] memory curAllocatedStake = _getAllocatedStake(operator, operatorSet, params.strategies);
+        uint[] memory prevAllocatedStake = _getPrevAllocatedStake(operator, operatorSet, params.strategies);
+
+        for (uint i = 0; i < curAllocatedStake.length; i++) {
+            // uint expectedSlashed = prevAllocatedStake[i].mulDiv(params.wadsToSlash[i], WAD, Math.Rounding.Down);
+            uint expectedSlashed = prevAllocatedStake[i].mulWad(params.wadsToSlash[i]);
+            assertEq(curAllocatedStake[i], prevAllocatedStake[i] - expectedSlashed, err);
         }
     }
 
@@ -918,6 +980,20 @@ abstract contract IntegrationBase is IntegrationDeployer, TypeImporter {
         }
     }
 
+    function assert_Snap_Slashed_EncumberedMagnitude(
+        User operator,
+        SlashingParams memory params,
+        string memory err
+    ) internal {
+        Magnitudes[] memory curMagnitudes = _getMagnitudes(operator, params.strategies);
+        Magnitudes[] memory prevMagnitudes = _getPrevMagnitudes(operator, params.strategies);
+
+        for (uint i = 0; i < params.strategies.length; i++) {
+            uint expectedSlashed = prevMagnitudes[i].encumbered.mulWadRoundUp(params.wadsToSlash[i]);
+            assertEq(curMagnitudes[i].encumbered, prevMagnitudes[i].encumbered - expectedSlashed, err);
+        }
+    }
+
     function assert_Snap_Added_AllocatableMagnitude(
         User operator,
         IStrategy[] memory strategies,
@@ -948,14 +1024,14 @@ abstract contract IntegrationBase is IntegrationDeployer, TypeImporter {
     function assert_Snap_Removed_AllocatableMagnitude(
         User operator,
         IStrategy[] memory strategies,
-        uint64[] memory magnitudeAllocated,
+        uint64[] memory magnitudeRemoved,
         string memory err
     ) internal {
         Magnitudes[] memory curMagnitudes = _getMagnitudes(operator, strategies);
         Magnitudes[] memory prevMagnitudes = _getPrevMagnitudes(operator, strategies);
 
         for (uint i = 0; i < strategies.length; i++) {
-            assertEq(curMagnitudes[i].allocatable, prevMagnitudes[i].allocatable - magnitudeAllocated[i], err);
+            assertEq(curMagnitudes[i].allocatable, prevMagnitudes[i].allocatable - magnitudeRemoved[i], err);
         }
     }
 
@@ -1009,6 +1085,21 @@ abstract contract IntegrationBase is IntegrationDeployer, TypeImporter {
         }
     }
 
+    function assert_Snap_Slashed_Allocation(
+        User operator,
+        OperatorSet memory operatorSet,
+        SlashingParams memory params,
+        string memory err
+    ) internal {
+        Allocation[] memory curAllocations = _getAllocations(operator, operatorSet, params.strategies);
+        Allocation[] memory prevAllocations = _getPrevAllocations(operator, operatorSet, params.strategies);
+
+        for (uint i = 0; i < params.strategies.length; i++) {
+            uint expectedSlashed = prevAllocations[i].currentMagnitude.mulWadRoundUp(params.wadsToSlash[i]);
+            assertEq(curAllocations[i].currentMagnitude, prevAllocations[i].currentMagnitude - expectedSlashed, err);
+        }
+    }
+
     function assert_Snap_Unchanged_MaxMagnitude(
         User operator,
         IStrategy[] memory strategies,
@@ -1019,6 +1110,20 @@ abstract contract IntegrationBase is IntegrationDeployer, TypeImporter {
 
         for (uint i = 0; i < strategies.length; i++) {
             assertEq(curMagnitudes[i].max, prevMagnitudes[i].max, err);
+        }
+    }
+
+    function assert_Snap_Slashed_MaxMagnitude(
+        User operator,
+        SlashingParams memory params,
+        string memory err
+    ) internal {
+        Magnitudes[] memory curMagnitudes = _getMagnitudes(operator, params.strategies);
+        Magnitudes[] memory prevMagnitudes = _getPrevMagnitudes(operator, params.strategies);
+
+        for (uint i = 0; i < params.strategies.length; i++) {
+            uint expectedSlashed = prevMagnitudes[i].max.mulWadRoundUp(params.wadsToSlash[i]);
+            assertEq(curMagnitudes[i].max, prevMagnitudes[i].max - expectedSlashed, err);
         }
     }
 
@@ -1234,6 +1339,21 @@ abstract contract IntegrationBase is IntegrationDeployer, TypeImporter {
                 expectedShares = prevShares[i] + uint(shareDeltas[i]);
             }
             assertEq(expectedShares, curShares[i], err);
+        }
+    }
+
+    function assert_Snap_Slashed_OperatorShares(
+        User operator,
+        SlashingParams memory params,
+        string memory err
+    ) internal {
+        uint[] memory curShares = _getOperatorShares(operator, params.strategies);
+        uint[] memory prevShares = _getPrevOperatorShares(operator, params.strategies);
+
+        for (uint i = 0; i < params.strategies.length; i++) {
+            // uint expectedSlashed = prevShares[i].mulDiv(params.wadsToSlash[i], WAD, Math.Rounding.Down);
+            uint expectedSlashed = prevShares[i].mulWad(params.wadsToSlash[i]);
+            assertEq(curShares[i], prevShares[i] - expectedSlashed, err);
         }
     }
 
@@ -1773,9 +1893,31 @@ abstract contract IntegrationBase is IntegrationDeployer, TypeImporter {
         Magnitudes[] memory magnitudes = _getMagnitudes(operator, strategies);
 
         for (uint i = 0; i < params.strategies.length; i++) {
-            IStrategy strategy = params.strategies[i];
             uint64 halfAvailable = uint64(magnitudes[i].allocatable) / 2;
             params.newMagnitudes[i] = allocations[i].currentMagnitude + halfAvailable;
+        }
+    }
+
+    /// @dev Generate params to allocate a random portion of available magnitude to each strategy
+    /// in the operator set. All strategies will have a nonzero allocation, and the minimum allocation
+    /// will be 10% of available magnitude
+    function _genAllocation_Rand(
+        User operator,
+        OperatorSet memory operatorSet
+    ) internal returns (AllocateParams memory params) {
+        params.operatorSet = operatorSet;
+        params.strategies = allocationManager.getStrategiesInOperatorSet(operatorSet);
+        params.newMagnitudes = new uint64[](params.strategies.length);
+
+        Allocation[] memory allocations = _getAllocations(operator, operatorSet, params.strategies);
+        Magnitudes[] memory magnitudes = _getMagnitudes(operator, params.strategies);
+
+        for (uint i = 0; i < params.strategies.length; i++) {
+            // minimum of 10%, maximum of 100%. increments of 10%.
+            uint r = _randUint({min: 1, max: 10});
+            uint64 allocation = uint64(magnitudes[i].allocatable) / uint64(r);
+
+            params.newMagnitudes[i] = allocations[i].currentMagnitude + allocation;
         }
     }
 
@@ -1824,10 +1966,25 @@ abstract contract IntegrationBase is IntegrationDeployer, TypeImporter {
         User operator,
         OperatorSet memory operatorSet,
         IStrategy[] memory strategies
-    ) internal view returns (AllocateParams memory params) {
+    ) internal pure returns (AllocateParams memory params) {
         params.operatorSet = operatorSet;
         params.strategies = strategies;
         params.newMagnitudes = new uint64[](params.strategies.length);
+    }
+
+    function _genSlashing_Half(
+        User operator,
+        OperatorSet memory operatorSet
+    ) internal view returns (SlashingParams memory params) {
+        params.operator = address(operator);
+        params.operatorSetId = operatorSet.id;
+        params.description = "genSlashing_Half";
+        params.strategies = allocationManager.getStrategiesInOperatorSet(operatorSet).sort();
+        params.wadsToSlash = new uint[](params.strategies.length);
+
+        for (uint i = 0; i < params.wadsToSlash.length; i++) {
+            params.wadsToSlash[i] = 5e16;
+        }
     }
 
     function _randWadToSlash() internal returns (uint) {
