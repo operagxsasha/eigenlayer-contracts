@@ -26,6 +26,7 @@ contract AllocationManager is
     using Snapshots for Snapshots.DefaultWadHistory;
     using OperatorSetLib for OperatorSet;
     using SlashingLib for uint256;
+    using Math for uint256;
 
     /**
      *
@@ -572,8 +573,8 @@ contract AllocationManager is
                     alloc.currentMagnitude = _addInt128(alloc.currentMagnitude, alloc.pendingDiff);
                 }
 
-                uint256 slashableProportion = uint256(alloc.currentMagnitude).divWad(maxMagnitude);
-                allocatedStake[i][j] = delegatedStake[i][j].mulWad(slashableProportion);
+                // uint256 slashableProportion = uint256(alloc.currentMagnitude).divWad(maxMagnitude);
+                allocatedStake[i][j] = delegatedStake[i][j].mulDiv(alloc.currentMagnitude, maxMagnitude);
             }
         }
     }

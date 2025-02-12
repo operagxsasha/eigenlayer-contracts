@@ -875,8 +875,7 @@ abstract contract IntegrationBase is IntegrationDeployer, TypeImporter {
         uint[] memory prevSlashableStake = _getPrevMinSlashableStake(operator, operatorSet, params.strategies);
 
         for (uint i = 0; i < params.strategies.length; i++) {
-            // uint expectedSlashed = prevSlashableStake[i].mulDiv(params.wadsToSlash[i], WAD, Math.Rounding.Down);
-            uint expectedSlashed = prevSlashableStake[i].mulWad(params.wadsToSlash[i]);
+            uint expectedSlashed = prevSlashableStake[i].mulWadRoundUp(params.wadsToSlash[i]);
             assertEq(curSlashableStake[i], prevSlashableStake[i] - expectedSlashed, err);
         }
     }
@@ -932,9 +931,46 @@ abstract contract IntegrationBase is IntegrationDeployer, TypeImporter {
         uint[] memory curAllocatedStake = _getAllocatedStake(operator, operatorSet, params.strategies);
         uint[] memory prevAllocatedStake = _getPrevAllocatedStake(operator, operatorSet, params.strategies);
 
+        Magnitudes[] memory curMagnitudes = _getMagnitudes(operator, params.strategies);
+        Magnitudes[] memory prevMagnitudes = _getPrevMagnitudes(operator, params.strategies);
+
         for (uint i = 0; i < curAllocatedStake.length; i++) {
-            // uint expectedSlashed = prevAllocatedStake[i].mulDiv(params.wadsToSlash[i], WAD, Math.Rounding.Down);
-            uint expectedSlashed = prevAllocatedStake[i].mulWad(params.wadsToSlash[i]);
+            // uint expectedSlashed = prevAllocatedStake[i].mulDiv(params.wadsToSlash[i], WAD, Math.Rounding.Up);
+            // uint actualSlashed = prevAllocatedStake[i] - curAllocatedStake[i];
+            uint expectedSlashed = prevAllocatedStake[i].mulWadRoundUp(params.wadsToSlash[i]);
+
+            // emit log_named_uint("prev enc mag   ", prevMagnitudes[i].encumbered);
+            // emit log_named_uint("prev max mag   ", prevMagnitudes[i].max);
+
+            // emit log_named_uint("cur enc mag    ", curMagnitudes[i].encumbered);
+            // emit log_named_uint("cur max mag    ", curMagnitudes[i].max);
+
+            // emit log("--");
+
+            // emit log_named_uint("prevStake      ", prevAllocatedStake[i]);
+            // emit log_named_uint("curStake       ", curAllocatedStake[i]);
+            // emit log_named_uint("opShares       ", delegationManager.operatorShares(address(operator), params.strategies[0]));
+            // emit log_named_uint("expected slash ", expectedSlashed);
+            // emit log_named_uint("actual slash   ", actualSlashed);
+            // emit log_named_string("eq?", expectedSlashed == actualSlashed ? "true" : "false");
+
+            // emit log("--");
+
+            // emit log("eq:");
+            
+            // emit log_named_uint("prevStake      ", prevAllocatedStake[i]);
+            // emit log_named_uint("expected + cur", curAllocatedStake[i] + expectedSlashed);
+            
+            // emit log("eq:");
+
+            // emit log_named_uint("curStake       ", curAllocatedStake[i]);
+            // emit log_named_uint("prev - expected", prevAllocatedStake[i] - expectedSlashed);
+
+            // emit log("--");
+
+            // uint res = prevAllocatedStake[i] - expectedSlashed;
+            // emit log_named_string("result eq", res == curAllocatedStake[i] ? "true" : "false");
+
             assertEq(curAllocatedStake[i], prevAllocatedStake[i] - expectedSlashed, err);
         }
     }
@@ -1298,7 +1334,7 @@ abstract contract IntegrationBase is IntegrationDeployer, TypeImporter {
 
         // For each strategy, check (prev - removed == cur)
         for (uint i = 0; i < strategies.length; i++) {
-            assertEq(prevShares[i] - removedShares[i], curShares[i], err);
+            assertEq(prevShares[i], curShares[i] + removedShares[i], err);
         }
     }
 
@@ -1352,7 +1388,7 @@ abstract contract IntegrationBase is IntegrationDeployer, TypeImporter {
 
         for (uint i = 0; i < params.strategies.length; i++) {
             // uint expectedSlashed = prevShares[i].mulDiv(params.wadsToSlash[i], WAD, Math.Rounding.Down);
-            uint expectedSlashed = prevShares[i].mulWad(params.wadsToSlash[i]);
+            uint expectedSlashed = prevShares[i].mulWadRoundUp(params.wadsToSlash[i]);
             assertEq(curShares[i], prevShares[i] - expectedSlashed, err);
         }
     }
@@ -1972,6 +2008,25 @@ abstract contract IntegrationBase is IntegrationDeployer, TypeImporter {
         params.newMagnitudes = new uint64[](params.strategies.length);
     }
 
+    /// Generate random slashing between 1 and 99%
+    function _genSlashing_Rand(
+        User operator,
+        OperatorSet memory operatorSet
+    ) internal returns (SlashingParams memory params) {
+        params.operator = address(operator);
+        params.operatorSetId = operatorSet.id;
+        params.description = "genSlashing_Half";
+        params.strategies = allocationManager.getStrategiesInOperatorSet(operatorSet).sort();
+        params.wadsToSlash = new uint[](params.strategies.length);
+
+        /// 1% * rand(1, 99)
+        uint slashWad = 1e16 * _randUint({min: 1, max: 99});
+
+        for (uint i = 0; i < params.wadsToSlash.length; i++) {
+            params.wadsToSlash[i] = slashWad;
+        }
+    }
+
     function _genSlashing_Half(
         User operator,
         OperatorSet memory operatorSet
@@ -1983,7 +2038,7 @@ abstract contract IntegrationBase is IntegrationDeployer, TypeImporter {
         params.wadsToSlash = new uint[](params.strategies.length);
 
         for (uint i = 0; i < params.wadsToSlash.length; i++) {
-            params.wadsToSlash[i] = 5e16;
+            params.wadsToSlash[i] = 1e17;
         }
     }
 

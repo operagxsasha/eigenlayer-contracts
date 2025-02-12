@@ -166,6 +166,7 @@ contract DelegationManager is
         SignatureWithExpiry memory newOperatorApproverSig,
         bytes32 approverSalt
     ) external returns (bytes32[] memory withdrawalRoots) {
+        // TODO -- add check newOperator != currentOperator ?
         withdrawalRoots = undelegate(msg.sender);
         // delegateTo uses msg.sender as staker
         delegateTo(newOperator, newOperatorApproverSig, approverSalt);

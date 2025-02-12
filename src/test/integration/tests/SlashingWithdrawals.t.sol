@@ -25,6 +25,7 @@ contract Integration_ALMSlashBase is IntegrationCheckUtils {
     /// 5. Operator registers for operator set
     /// NOTE: Steps 4 and 5 are done in random order, as these should not have an outcome on the test
     function _init() internal virtual override {
+        _configAssetTypes(HOLDS_LST);
         // (staker, strategies, initTokenBalances) = _newRandomStaker();
         // operator = _newRandomOperator_NoAssets();
         // (avs,) = _newRandomAVS();
@@ -83,14 +84,54 @@ contract Integration_InitSlash is Integration_ALMSlashBase {
         check_Base_Slashing_State(operator, allocateParams, slashParams);
     } 
 
-    function testFuzz_slashMulti(uint24 _r) public rand(_r) {
+    function testFuzz_slashMulti_WithdrawTokens(uint24 _r) public rand(_r) {
         for (uint i = 0; i < 25; i++) {
             emit log_named_uint("iter", i);
-            slashParams = _genSlashing_Half(operator, operatorSet);
+            slashParams = _genSlashing_Rand(operator, operatorSet);
             avs.slashOperator(slashParams);
             check_Base_Slashing_State(operator, allocateParams, slashParams);
         }
-    } 
+
+        // undelegate
+        uint[] memory shares = _getStakerWithdrawableShares(staker, strategies);
+        Withdrawal[] memory withdrawals = staker.undelegate();
+        bytes32[] memory roots = _getWithdrawalHashes(withdrawals);
+        check_Undelegate_State(staker, operator, withdrawals, roots, strategies, shares);
+
+        _rollBlocksForCompleteWithdrawals(withdrawals);
+
+        // try withdrawing as tokens:
+        IERC20[] memory tokens = _getUnderlyingTokens(strategies);
+        uint[] memory expectedTokens = _calculateExpectedTokens(strategies, shares);
+
+        staker.completeWithdrawalsAsTokens(withdrawals);
+        for (uint i = 0; i < withdrawals.length; i++) {
+            check_Withdrawal_AsTokens_State(staker, operator, withdrawals[i], strategies, shares, tokens, expectedTokens);
+        }
+    }
+
+    function testFuzz_slashMulti_WithdrawShares(uint24 _r) public rand(_r) {
+        for (uint i = 0; i < 25; i++) {
+            emit log_named_uint("iter", i);
+            slashParams = _genSlashing_Rand(operator, operatorSet);
+            avs.slashOperator(slashParams);
+            check_Base_Slashing_State(operator, allocateParams, slashParams);
+        }
+
+        // undelegate
+        uint[] memory shares = _getStakerWithdrawableShares(staker, strategies);
+        Withdrawal[] memory withdrawals = staker.undelegate();
+        bytes32[] memory roots = _getWithdrawalHashes(withdrawals);
+        check_Undelegate_State(staker, operator, withdrawals, roots, strategies, shares);
+
+        _rollBlocksForCompleteWithdrawals(withdrawals);
+
+        // try withdrawing as shares
+        staker.completeWithdrawalsAsShares(withdrawals);
+        for (uint i = 0; i < withdrawals.length; i++) {
+            check_Withdrawal_AsShares_Undelegated_State(staker, operator, withdrawals[i], strategies, shares);
+        }
+    }
 }
 
 contract Integration_SlashingWithdrawals is Integration_ALMSlashBase {
