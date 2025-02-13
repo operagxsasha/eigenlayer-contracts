@@ -574,7 +574,8 @@ contract AllocationManager is
                 }
 
                 // uint256 slashableProportion = uint256(alloc.currentMagnitude).divWad(maxMagnitude);
-                allocatedStake[i][j] = delegatedStake[i][j].mulDiv(alloc.currentMagnitude, maxMagnitude);
+                // allocatedStake[i][j] = delegatedStake[i][j].mulWad(slashableProportion);
+                allocatedStake[i][j] = delegatedStake[i][j].mulDiv(alloc.currentMagnitude, maxMagnitude, Math.Rounding.Down);
             }
         }
     }

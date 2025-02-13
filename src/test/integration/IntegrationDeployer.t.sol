@@ -660,8 +660,8 @@ abstract contract IntegrationDeployer is ExistingDeploymentParser {
             for (uint i = 0; i < numAssets; i++) {
                 IStrategy strat = lstStrats[i];
                 IERC20 underlyingToken = strat.underlyingToken();
-                // uint balance = _randUint({min: MIN_BALANCE, max: MAX_BALANCE});
-                uint balance = 1e18;
+                uint balance = _randUint({min: MIN_BALANCE, max: MAX_BALANCE});
+                // uint balance = 1e18;
 
                 StdCheats.deal(address(underlyingToken), address(user), balance);
                 tokenBalances[i] = balance;

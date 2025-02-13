@@ -936,40 +936,40 @@ abstract contract IntegrationBase is IntegrationDeployer, TypeImporter {
 
         for (uint i = 0; i < curAllocatedStake.length; i++) {
             // uint expectedSlashed = prevAllocatedStake[i].mulDiv(params.wadsToSlash[i], WAD, Math.Rounding.Up);
-            // uint actualSlashed = prevAllocatedStake[i] - curAllocatedStake[i];
+            uint actualSlashed = prevAllocatedStake[i] - curAllocatedStake[i];
             uint expectedSlashed = prevAllocatedStake[i].mulWadRoundUp(params.wadsToSlash[i]);
 
-            // emit log_named_uint("prev enc mag   ", prevMagnitudes[i].encumbered);
-            // emit log_named_uint("prev max mag   ", prevMagnitudes[i].max);
+            emit log_named_uint("prev enc mag   ", prevMagnitudes[i].encumbered);
+            emit log_named_uint("prev max mag   ", prevMagnitudes[i].max);
 
-            // emit log_named_uint("cur enc mag    ", curMagnitudes[i].encumbered);
-            // emit log_named_uint("cur max mag    ", curMagnitudes[i].max);
+            emit log_named_uint("cur enc mag    ", curMagnitudes[i].encumbered);
+            emit log_named_uint("cur max mag    ", curMagnitudes[i].max);
 
-            // emit log("--");
+            emit log("--");
 
-            // emit log_named_uint("prevStake      ", prevAllocatedStake[i]);
-            // emit log_named_uint("curStake       ", curAllocatedStake[i]);
-            // emit log_named_uint("opShares       ", delegationManager.operatorShares(address(operator), params.strategies[0]));
-            // emit log_named_uint("expected slash ", expectedSlashed);
-            // emit log_named_uint("actual slash   ", actualSlashed);
-            // emit log_named_string("eq?", expectedSlashed == actualSlashed ? "true" : "false");
+            emit log_named_uint("prevStake      ", prevAllocatedStake[i]);
+            emit log_named_uint("curStake       ", curAllocatedStake[i]);
+            emit log_named_uint("opShares       ", delegationManager.operatorShares(address(operator), params.strategies[0]));
+            emit log_named_uint("expected slash ", expectedSlashed);
+            emit log_named_uint("actual slash   ", actualSlashed);
+            emit log_named_string("eq?", expectedSlashed == actualSlashed ? "true" : "false");
 
-            // emit log("--");
+            emit log("--");
 
-            // emit log("eq:");
+            emit log("eq:");
             
-            // emit log_named_uint("prevStake      ", prevAllocatedStake[i]);
-            // emit log_named_uint("expected + cur", curAllocatedStake[i] + expectedSlashed);
+            emit log_named_uint("prevStake      ", prevAllocatedStake[i]);
+            emit log_named_uint("expected + cur ", curAllocatedStake[i] + expectedSlashed);
             
-            // emit log("eq:");
+            emit log("eq:");
 
-            // emit log_named_uint("curStake       ", curAllocatedStake[i]);
-            // emit log_named_uint("prev - expected", prevAllocatedStake[i] - expectedSlashed);
+            emit log_named_uint("curStake       ", curAllocatedStake[i]);
+            emit log_named_uint("prev - expected", prevAllocatedStake[i] - expectedSlashed);
 
-            // emit log("--");
+            emit log("--");
 
-            // uint res = prevAllocatedStake[i] - expectedSlashed;
-            // emit log_named_string("result eq", res == curAllocatedStake[i] ? "true" : "false");
+            uint res = prevAllocatedStake[i] - expectedSlashed;
+            emit log_named_string("result eq", res == curAllocatedStake[i] ? "true" : "false");
 
             assertEq(curAllocatedStake[i], prevAllocatedStake[i] - expectedSlashed, err);
         }
