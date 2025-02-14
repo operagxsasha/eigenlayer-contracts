@@ -1029,7 +1029,6 @@ contract AllocationManagerUnitTests_SlashOperator is AllocationManagerUnitTests 
             })
         });
 
-
         // 2. Slash operator again for 99.99% in opSet 0 bringing their magnitude to 1e14
         slashingParams = SlashingParams({
             operator: defaultOperator,
@@ -2359,7 +2358,6 @@ contract AllocationManagerUnitTests_ModifyAllocations is AllocationManagerUnitTe
             }),
             expectedMagnitudes: Magnitudes({encumbered: magnitude, max: WAD, allocatable: WAD - magnitude})
         });
-
 
         // 3. Check allocation and info after roll to completion
         cheats.roll(effectBlock);
@@ -3873,7 +3871,6 @@ contract AllocationManagerUnitTests_createOperatorSets is AllocationManagerUnitT
 }
 
 contract AllocationManagerUnitTests_setAVSRegistrar is AllocationManagerUnitTests {
-
     function test_getAVSRegistrar() public {
         address randomAVS = random().Address();
         IAVSRegistrar avsRegistrar = allocationManager.getAVSRegistrar(randomAVS);

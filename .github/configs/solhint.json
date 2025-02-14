@@ -18,6 +18,9 @@
     "no-global-import": "off",
     "immutable-vars-naming": "off",
     "no-console": "off"
+<<<<<<< HEAD:.solhint.json
 
+=======
+>>>>>>> dev:.github/configs/solhint.json
   }
 }

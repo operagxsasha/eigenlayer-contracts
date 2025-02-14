@@ -1,7 +1,13 @@
 {
+<<<<<<<< HEAD:script/releases/v1.0.3-slashing/upgrade.json
     "name": "slashing-patch-RC-domainSeparator",
     "from": "1.0.2",
     "to": "1.0.3",
+========
+    "name": "slashing-rewards-v2.1",
+    "from": "1.0.3",
+    "to": "1.1.0",
+>>>>>>>> dev:script/releases/v1.1.0-slashing/upgrade.json
     "phases": [
         {
             "type": "eoa",

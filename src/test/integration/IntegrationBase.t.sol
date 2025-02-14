@@ -1787,7 +1787,6 @@ abstract contract IntegrationBase is IntegrationDeployer, TypeImporter {
         Magnitudes[] memory magnitudes = _getMagnitudes(operator, strategies);
 
         for (uint i = 0; i < params.strategies.length; i++) {
-            IStrategy strategy = params.strategies[i];
             uint64 halfAvailable = uint64(magnitudes[i].allocatable) / 2;
             params.newMagnitudes[i] = allocations[i].currentMagnitude + halfAvailable;
         }
@@ -2571,8 +2570,13 @@ abstract contract IntegrationBase is IntegrationDeployer, TypeImporter {
     }
 
     function _getCheckpointPodBalanceGwei(User staker) internal view returns (uint64) {
-        EigenPod pod = staker.pod();
-        return uint64(pod.currentCheckpoint().podBalanceGwei);
+        if (forkType != LOCAL && !isUpgraded) {
+            IEigenPod_DeprecatedM2 pod = IEigenPod_DeprecatedM2(address(staker.pod()));
+            return uint64(pod.currentCheckpoint().podBalanceGwei);
+        } else {
+            EigenPod pod = staker.pod();
+            return uint64(pod.currentCheckpoint().podBalanceGwei);
+        }
     }
 
     function _getPrevCheckpointPodBalanceGwei(User staker) internal timewarp() returns (uint64) {
