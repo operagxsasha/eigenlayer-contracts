@@ -160,7 +160,7 @@ contract EigenPod is Initializable, ReentrancyGuardUpgradeable, EigenPodPausingC
         // Verify `balanceContainerProof` against `beaconBlockRoot`
         BeaconChainProofs.verifyBalanceContainer({
             proofTimestamp: checkpointTimestamp,
-            pectraForkTimestamp: getPectraForkTimestamp(),
+            pectraForkTimestamp: _getPectraForkTimestamp(),
             beaconBlockRoot: checkpoint.beaconBlockRoot,
             proof: balanceContainerProof
         });
@@ -345,7 +345,7 @@ contract EigenPod is Initializable, ReentrancyGuardUpgradeable, EigenPodPausingC
         // Verify Validator container proof against `beaconStateRoot`
         BeaconChainProofs.verifyValidatorFields({
             proofTimestamp: beaconTimestamp,
-            pectraForkTimestamp: getPectraForkTimestamp(),
+            pectraForkTimestamp: _getPectraForkTimestamp(),
             beaconStateRoot: stateRootProof.beaconStateRoot,
             validatorFields: proof.validatorFields,
             validatorFieldsProof: proof.proof,
@@ -492,7 +492,7 @@ contract EigenPod is Initializable, ReentrancyGuardUpgradeable, EigenPodPausingC
         // Verify passed-in validatorFields against verified beaconStateRoot:
         BeaconChainProofs.verifyValidatorFields({
             proofTimestamp: beaconTimestamp,
-            pectraForkTimestamp: getPectraForkTimestamp(),
+            pectraForkTimestamp: _getPectraForkTimestamp(),
             beaconStateRoot: beaconStateRoot,
             validatorFields: validatorFields,
             validatorFieldsProof: validatorFieldsProof,
@@ -747,7 +747,7 @@ contract EigenPod is Initializable, ReentrancyGuardUpgradeable, EigenPodPausingC
 
     /// @notice Returns the timestamp of the Pectra fork, read from the `EigenPodManager` contract
     /// @dev Specifically, this returns the timestamp of the first non-missed slot at or after the Pectra hard fork
-    function getPectraForkTimestamp() public view returns (uint64) {
+    function _getPectraForkTimestamp() internal view returns (uint64) {
         return eigenPodManager.pectraForkTimestamp();
     }
 }
